@@ -1,0 +1,317 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define LINESIZE 128
+
+/////////////
+typedef struct list *List;
+
+typedef struct node *Node;
+
+struct node {
+    char *url;
+    Node next;
+    int tally;
+    double pageRank;
+};
+
+struct list {
+    Node head;
+    Node tail;
+    int size;
+};
+
+static Node newNode(char *u);
+
+/**
+ * Creates a new empty list
+ */
+List ListNew(void);
+
+/**
+ * Frees all resources associated with the given list
+ */
+void ListFree(List l);
+
+/**
+ * Append one URL to the end of a list.
+ */
+void ListAppend(List l, char *u);
+
+int ListSize(List l);
+
+bool search_list(List l, char *u);
+
+void increment_tally(List l, char *u);
+
+void sortTally(List l);
+
+void sortPagerank(List l);
+
+void assign_pagerank(List l, char *path, double rank);
+
+void sortAlphabetic(List l);
+////////////
+
+int main(int argc, char *argv[]) {
+    List tallies = ListNew();
+
+    char line[LINESIZE];
+    char *tokenised_path;
+    int i = 1;
+    char q[15];
+
+    while (i < argc) {
+        sprintf(q, "%s", argv[i]);
+        FILE *fp = fopen("invertedIndex.txt", "r");
+        if (fp == NULL) {
+            fprintf(stderr, "Invalid input file\n");
+            exit(EXIT_FAILURE);
+        }
+        while (fgets(line, sizeof(line), fp)) {
+            line[strcspn(line, "\n")] = 0;
+
+            tokenised_path = strtok(line, " ");
+            if (strcmp(tokenised_path, q) == 0) {
+
+                tokenised_path = strtok(NULL, " ");
+                while (tokenised_path != NULL) {
+                    if (search_list(tallies,tokenised_path) == true) {
+                        increment_tally(tallies, tokenised_path);
+                    } else {
+                        ListAppend(tallies, tokenised_path);
+                    }
+                    tokenised_path = strtok(NULL, " ");
+                }
+            }
+        }
+        fclose(fp);
+        i++;
+    }
+
+    // sort by tally count
+    sortTally(tallies);
+    
+    // assign page ranks
+    FILE *fp2 = fopen("pagerankList.txt", "r");
+    if (fp2 == NULL) {
+        fprintf(stderr, "Invalid input file\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    double rank;
+    while (fgets(line, sizeof(line), fp2)) {
+        tokenised_path = strtok(line, ",");
+        rank = atof(strtok(NULL, " "));
+        rank = atof(strtok(NULL, " "));
+        assign_pagerank(tallies, tokenised_path, rank);
+    }
+
+    // sort by page rank
+    sortPagerank(tallies);
+
+    sortAlphabetic(tallies);
+
+    Node curr = tallies->head;
+    while (curr != NULL) {
+        printf("%s\n", curr->url);
+        curr = curr->next;
+    }
+    ListFree(tallies);
+    
+}
+
+/**
+ * Creates a new empty list
+ */
+List ListNew(void) {
+    List l = malloc(sizeof (*l));
+	if (l == NULL) {
+	    printf("error: couldn't allocate List");
+        exit(EXIT_FAILURE);
+	}
+    l->head = NULL;
+    l->tail = NULL;
+    l->size = 0;
+    return l;
+}
+
+/**
+ * Frees all resources associated with the given list
+ */
+void ListFree(List l) {
+	if (l == NULL) {
+	    return;
+    }
+    Node curr = l->head;
+	while (curr != NULL) {
+		Node temp = curr;
+		curr = curr->next;
+		free(temp);
+	}
+	free(l);
+}
+
+int ListSize(List l) {
+    return l->size;
+}
+
+/**
+ * Append one URL to the end of a list.
+ */
+void ListAppend(List l, char *u) {
+	assert(l != NULL);
+	Node n = newNode(u);
+	if (l->head == NULL) {
+		l->head = l->tail = n;
+	} else {
+		l->tail->next = n;
+		l->tail = n;
+	}
+	n->tally = 1;
+	n->pageRank = 0.0;
+	l->size++;
+}
+
+/**
+ * Create a new Node with name u
+ * (this function is local to this ADT)
+ */
+static Node newNode(char *u) {
+	Node n = malloc(sizeof(*n));
+	if (n == NULL) {
+		printf("error: couldn't allocate node");
+		exit(EXIT_FAILURE);
+	}
+	n->url = strdup(u);
+	n->next = NULL;
+	return n;
+}
+
+bool search_list(List l, char *u) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, u) == 0) {
+	        return true;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return false;
+}
+
+void increment_tally(List l, char *u) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, u) == 0) {
+	        curr->tally++;
+	        return;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return;
+}
+
+void sortTally(List l) {
+	assert(l != NULL);
+    for(int i = 1; i < ListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < ListSize(l) - i; j++) {
+            if (curr->tally < curr->next->tally) {
+                int temp;
+                char *temp1;
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                temp1 = strdup(curr->url);
+                curr->url = strdup(curr->next->url);
+                strcpy(curr->next->url, temp1); 
+
+            }
+            curr = curr->next;            
+        }
+    }
+}
+
+void sortPagerank(List l) {
+	assert(l != NULL);
+    for(int i = 1; i < ListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < ListSize(l) - i; j++) {
+            if (curr->tally == curr->next->tally && curr->pageRank < curr->next->pageRank) {
+                int temp;
+                char *temp1;
+                double temp2;
+                
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                temp1 = strdup(curr->url);
+                curr->url = strdup(curr->next->url);
+                strcpy(curr->next->url, temp1);
+                
+                temp2 = curr->pageRank;
+                curr->pageRank = curr->next->pageRank;
+                curr->next->pageRank = temp2;
+            }
+            curr = curr->next;            
+        }
+    }
+}
+
+void assign_pagerank(List l, char *path, double rank) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, path) == 0) {
+	        curr->pageRank = rank;
+	        return;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return;
+}
+
+void sortAlphabetic(List l) {
+	assert(l != NULL);
+    for(int i = 1; i < ListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < ListSize(l) - i; j++) {
+            if (curr->tally == curr->next->tally && curr->pageRank == curr->next->pageRank 
+                && strcmp(curr->url,curr->next->url) > 0) {
+                int temp;
+                char *temp1;
+                double temp2;
+                
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                temp1 = strdup(curr->url);
+                curr->url = strdup(curr->next->url);
+                strcpy(curr->next->url, temp1);
+                
+                temp2 = curr->pageRank;
+                curr->pageRank = curr->next->pageRank;
+                curr->next->pageRank = temp2;
+            }
+            curr = curr->next;            
+        }
+    }
+}
