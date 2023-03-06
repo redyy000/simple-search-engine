@@ -1,0 +1,131 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "footlist.h"
+
+struct node {
+    char *url;
+    Node next;
+};
+
+struct footlist {
+    Node head;
+    Node tail;
+    int size;
+};
+
+static Node newNode(char *u);
+
+/**
+ * Creates a new empty list
+ */
+FootList FootListNew(void) {
+
+    FootList l = malloc(sizeof (*l));
+	if (l == NULL) {
+	    printf("error: couldn't allocate List");
+        exit(EXIT_FAILURE);
+	}
+    l->head = NULL;
+    l->tail = NULL;
+    l->size = 0;
+    return l;
+}
+
+/**
+ * Frees all resources associated with the given list
+ */
+void FootListFree(FootList l) {
+	if (l == NULL) {
+	    return;
+    }
+    Node curr = l->head;
+	while (curr != NULL) {
+		Node temp = curr;
+		free(curr->url);
+		curr = curr->next;
+		free(temp);
+	}
+	free(l);
+}
+/**
+ * Append one URL to the end of a list.
+ */
+void FootListAppend(FootList l, char *u) {
+	assert(l != NULL);
+	Node n = newNode(u);
+	if (l->head == NULL) {
+		l->head = l->tail = n;
+	} else {
+		l->tail->next = n;
+		l->tail = n;
+	}
+	l->size++;
+}
+
+/**
+ * Create a new Node with name u
+ * (this function is local to this ADT)
+ */
+static Node newNode(char *u) {
+	Node n = malloc(sizeof(*n));
+	assert(n != NULL);
+	n->url = strdup(u);
+	n->next = NULL;
+	return n;
+}
+
+int FootListSize(FootList l) {
+    return l->size;
+}
+bool search_Footlist(FootList l, char *u) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, u) == 0) {
+	        return true;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return false;
+}
+
+void FootListPrint(FootList l) {
+    Node curr = l->head;
+    while (curr != NULL) {
+        printf("curr->url is %s\n", curr->url);
+        curr = curr->next;
+    }
+}
+
+void FootListSort(FootList l) {
+	assert(l != NULL);
+    for(int i = 1; i < FootListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < FootListSize(l) - i; j++) {
+            if (strcmp(curr->url,curr->next->url) > 0) {
+                int temp;
+                char temp1[50] = "";
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                strcpy(temp1, curr->url);
+                strcpy(curr->url, curr->next->url);
+                strcpy(curr->next->url, temp1);
+            }
+            curr = curr->next;            
+        }
+    }
+}

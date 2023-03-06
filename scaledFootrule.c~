@@ -1,0 +1,21 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "footlist.h"
+
+int main(int argc, char *argv[]) {
+    if (argc <= 1) {
+        printf("error: Program requires two or more files\n");
+        exit(EXIT_FAILURE);
+}
+

@@ -1,0 +1,162 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "list.h"
+#include "Graph.h"
+#include "readData.h"
+
+#define LINESIZE 128
+#define BUFFER 20
+
+/**
+ * Creates list using URLs in collection.txt 
+ */
+List make_list(void) {
+    List l = ListNew();
+    FILE *fp = fopen("collection.txt", "r");
+    if (fp == NULL) {
+        fprintf(stderr, "Invalid input file\n");
+        exit(EXIT_FAILURE);
+    }
+    char line[LINESIZE];
+    char *tokenised_path;
+    int z;
+    // letters_url stores "url"
+    char letters_url[BUFFER];
+    strcpy(letters_url, "url");
+    // read collection.txt line by line until end of file is reached
+    while (fgets(line, sizeof(line), fp)) {
+        tokenised_path = strtok(line, "url");
+        if (tokenised_path != NULL) {
+            // if a url number is read, store the url and its number in the list
+            if (!is_whitespace(tokenised_path)) {
+                // store url-- in letters_url, then append
+                z = atoi(tokenised_path);
+                char q[BUFFER];
+                sprintf(q, "%d", z);
+                strcat(letters_url, q);
+                ListAppend(l, letters_url);
+                strcpy(letters_url, "url");
+            }
+        }
+        // read the rest of the line
+        while (tokenised_path != NULL) {
+            tokenised_path = strtok(NULL, "url");
+            if (tokenised_path != NULL) {
+            // if a url number is read, store the url and its number in the list
+                if (!is_whitespace(tokenised_path)) {
+                    // store url-- in letters_url, then append
+                    z = atoi(tokenised_path);
+                    char q[BUFFER];
+                    sprintf(q, "%d", z);
+                    strcat(letters_url, q);
+                    ListAppend(l, letters_url);
+                    strcpy(letters_url, "url");
+                }
+            }
+        }
+    }
+    fclose(fp);
+    return l;
+}
+
+/**
+ * Creates graph using URLs in list_of_urls 
+ */
+Graph make_graph(List l) {
+    Graph g = GraphNew(ListSize(l));
+    
+    char *tokenised_path;
+    int z;
+    // letters_url stores "url"
+    char letters_url[BUFFER];
+    strcpy(letters_url, "url");
+    // letters_txt stores ".txt"
+    char letters_txt[BUFFER];
+    strcpy(letters_txt, ".txt");
+    int i = 0;
+    char newline[LINESIZE];
+    // create edges with each url in the list
+    while (i < ListSize(l)) {
+        // prepare for fopen
+        char temp[BUFFER];
+        strcpy(temp, (getUrlFromVertex(l, i)));
+        strcat(temp, letters_txt);
+        FILE *filei = fopen(temp, "r");
+        if (filei == NULL) {
+            fprintf(stderr, "Invalid input file\n");
+            exit(EXIT_FAILURE);
+        }
+        // ignore the first line
+        fgets(newline, sizeof(newline), filei);
+        // read url--.txt line by line until end of file is reached
+        while (fgets(newline, sizeof(newline), filei)) {
+            // if the first 14 characters are "#end Section-1", then break
+            if (strncmp(newline, "#end Section-1", 14) == 0) {
+                i++;
+                break;
+            } else {
+                tokenised_path = strtok(newline, "url");
+                if (tokenised_path != NULL) {
+                    // if a url number is read, create edge
+                    if (!is_whitespace(tokenised_path)) {
+                        // store url-- in letters_url
+                        z = atoi(tokenised_path);
+                        char q[BUFFER];
+                        sprintf(q, "%d", z);
+                        strcat(letters_url, q);
+                        Vertex j = getVertexFromUrl(l, letters_url);
+                        if (i != j) {
+                            GraphInsertEdge(g, (Edge){i, j});
+                        }
+                        strcpy(letters_url, "url");
+                    }
+                }
+                // repeat until end of line
+                while (tokenised_path != NULL) {
+                    tokenised_path = strtok(NULL, "url");
+                    if (tokenised_path != NULL) {
+                        if (!is_whitespace(tokenised_path)) {
+                            // store url-- in letters_url
+                            z = atoi(tokenised_path);
+                            char q[BUFFER];
+                            sprintf(q, "%d", z);
+                            strcat(letters_url, q);
+                            Vertex j = getVertexFromUrl(l, letters_url);
+                            if (i != j) {
+                                GraphInsertEdge(g, (Edge){i, j});
+                            }
+                            strcpy(letters_url, "url");
+                        }
+                    }
+                }
+            }
+        }
+        fclose(filei);
+    }
+    return g;
+}
+
+/**
+ * (from Stack Overflow) Code to check whether whitespace is present 
+ */
+int is_whitespace(char *word) {
+   size_t spaces = 0;
+   size_t i = 0;
+   size_t slen = strlen(word);
+
+   for (i = 0; i< slen; i++)
+       if (isspace((int)word[i])) spaces++;
+
+   return spaces == slen;
+}

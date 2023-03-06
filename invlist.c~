@@ -1,0 +1,255 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "invlist.h"
+
+struct node {
+    char *url;
+    Node next;
+    int tally;
+    double pageRank;
+};
+
+struct invlist {
+    Node head;
+    Node tail;
+    int size;
+};
+
+/**
+ * Create a new Node with name u
+ * (this function is local to this ADT)
+ */
+static Node newNode(char *u);
+
+/**
+ * Creates a new empty list
+ */
+InvList InvListNew(void) {
+    InvList l = malloc(sizeof (*l));
+	if (l == NULL) {
+	    printf("error: couldn't allocate List");
+        exit(EXIT_FAILURE);
+	}
+    l->head = NULL;
+    l->tail = NULL;
+    l->size = 0;
+    return l;
+}
+
+/**
+ * Frees all resources associated with the given list
+ */
+void InvListFree(InvList l) {
+	if (l == NULL) {
+	    return;
+    }
+    Node curr = l->head;
+	while (curr != NULL) {
+		Node temp = curr;
+		free(curr->url);
+		curr = curr->next;
+		free(temp);
+	}
+	free(l);
+}
+
+/**
+ * Returns the size of the InvList
+ */
+int InvListSize(InvList l) {
+    return l->size;
+}
+
+/**
+ * Append one URL to the end of a list.
+ */
+void InvListAppend(InvList l, char *u) {
+	assert(l != NULL);
+	Node n = newNode(u);
+	if (l->head == NULL) {
+		l->head = l->tail = n;
+	} else {
+		l->tail->next = n;
+		l->tail = n;
+	}
+	n->tally = 1;
+	l->size++;
+}
+
+/**
+ * Create a new Node with name u
+ * (this function is local to this ADT)
+ */
+static Node newNode(char *u) {
+	Node n = malloc(sizeof(*n));
+	if (n == NULL) {
+		printf("error: couldn't allocate node");
+		exit(EXIT_FAILURE);
+	}
+	n->url = strdup(u);
+	n->next = NULL;
+	return n;
+}
+
+/**
+ * Searches for url in InvList.
+ * Returns true if successful, false if unsuccessful
+ */
+bool search_Invlist(InvList l, char *u) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, u) == 0) {
+	        return true;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return false;
+}
+
+/**
+ * Increments tally of node containing url.
+ */
+void increment_tally(InvList l, char *u) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, u) == 0) {
+	        curr->tally++;
+	        return;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return;
+}
+
+/**
+ * Prints urls to stdout
+ */
+void print_urls(InvList l) {
+    Node curr = l->head;
+    while (curr != NULL) {
+        printf("%s\n", curr->url);
+        curr = curr->next;
+    }
+}
+
+/**
+ * Sorts InvList by tally
+ */
+void sortTally(InvList l) {
+	assert(l != NULL);
+    for(int i = 1; i < InvListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < InvListSize(l) - i; j++) {
+            if (curr->tally < curr->next->tally) {
+                // swap urls and tallies
+                int temp;
+                char temp1[50] = "";
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                strcpy(temp1, curr->url);
+                strcpy(curr->url, curr->next->url);
+                strcpy(curr->next->url, temp1);
+            }
+            curr = curr->next;            
+        }
+    }
+}
+
+/**
+ * Sorts InvList by page rank
+ */
+void sortPagerank(InvList l) {
+	assert(l != NULL);
+    for(int i = 1; i < InvListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < InvListSize(l) - i; j++) {
+            if (curr->tally == curr->next->tally &&
+                curr->pageRank < curr->next->pageRank) {
+                // swap urls, tallies and page ranks
+                int temp;
+                char temp1[50] = "";
+                double temp2;
+                
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                strcpy(temp1, curr->url);
+                strcpy(curr->url, curr->next->url);
+                strcpy(curr->next->url, temp1);
+                
+                temp2 = curr->pageRank;
+                curr->pageRank = curr->next->pageRank;
+                curr->next->pageRank = temp2;
+            }
+            curr = curr->next;            
+        }
+    }
+}
+
+/**
+ * Stores ranks of each url in InvList 
+ */
+void assign_pagerank(InvList l, char *path, double rank) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, path) == 0) {
+	        curr->pageRank = rank;
+	        return;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return;
+}
+
+/**
+ * Sorts InvList by alphabetical order
+ */
+void sortAlphabetic(InvList l) {
+	assert(l != NULL);
+    for(int i = 1; i < InvListSize(l); i++) {
+        Node curr = l->head;
+        for(int j = 0; j < InvListSize(l) - i; j++) {
+            if (curr->tally == curr->next->tally &&
+                curr->pageRank == curr->next->pageRank 
+                && strcmp(curr->url,curr->next->url) > 0) {
+                // swap urls, tallies and page ranks
+                int temp;
+                char temp1[50] = "";
+                double temp2;
+                
+                temp = curr->tally;
+                curr->tally = curr->next->tally;
+                curr->next->tally = temp;
+
+                strcpy(temp1, curr->url);
+                strcpy(curr->url, curr->next->url);
+                strcpy(curr->next->url, temp1);
+
+                temp2 = curr->pageRank;
+                curr->pageRank = curr->next->pageRank;
+                curr->next->pageRank = temp2;
+            }
+            curr = curr->next;            
+        }
+    }
+}
