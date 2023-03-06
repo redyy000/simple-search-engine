@@ -1,0 +1,41 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#ifndef FOOTLIST_H
+#define FOOTLIST_H
+
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct footlist *FootList;
+
+typedef struct node *Node;
+/**
+ * Creates a new empty list
+ */
+FootList FootListNew(void);
+
+/**
+ * Frees all resources associated with the given list
+ */
+void FootListFree(FootList l);
+
+/**
+ * Append one URL to the end of a list.
+ */
+void FootListAppend(FootList l, char *u);
+
+int FootListSize(FootList l);
+
+bool search_Footlist(FootList l, char *u);
+
+void FootListPrint(FootList l);
+#endif

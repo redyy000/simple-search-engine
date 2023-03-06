@@ -1,0 +1,89 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "invlist.h"
+
+#define LINESIZE 128
+
+
+int main(int argc, char *argv[]) {
+    InvList tallies = InvListNew();
+
+    char line[LINESIZE];
+    char *tokenised_path;
+    int i = 1;
+    char q[15];
+    // while more query words exist
+    while (i < argc) {
+        // store query word in q
+        sprintf(q, "%s", argv[i]);
+        FILE *fp = fopen("invertedIndex.txt", "r");
+        if (fp == NULL) {
+            fprintf(stderr, "Invalid input file\n");
+            exit(EXIT_FAILURE);
+        }
+        // scan every line until end of file or the query word is found
+        while (fgets(line, sizeof(line), fp)) {
+            // remove newline character stored by fgets
+            line[strcspn(line, "\n")] = 0;
+            tokenised_path = strtok(line, " ");
+            if (strcmp(tokenised_path, q) == 0) {
+                // read urls in the same line, append/increment depending on
+                // whether they are already in the list or not
+                tokenised_path = strtok(NULL, " ");
+                while (tokenised_path != NULL) {
+                    if (search_Invlist(tallies,tokenised_path) == true) {
+                        increment_tally(tallies, tokenised_path);
+                    } else {
+                        InvListAppend(tallies, tokenised_path);
+                    }
+                    tokenised_path = strtok(NULL, " ");
+                }
+            }
+        }
+        fclose(fp);
+        i++;
+    }
+
+    // sort by tally count
+    sortTally(tallies);
+    
+    // assign page ranks
+    FILE *fp2 = fopen("pagerankList.txt", "r");
+    if (fp2 == NULL) {
+        fprintf(stderr, "Invalid input file\n");
+        exit(EXIT_FAILURE);
+    }
+    double rank;
+    while (fgets(line, sizeof(line), fp2)) {
+        // store url in tokenised_path from pagerankList.txt
+        tokenised_path = strtok(line, ",");
+        // ignore outdegree from pagerankList.txt
+        rank = atof(strtok(NULL, " "));
+        // store pagerank in rank
+        rank = atof(strtok(NULL, " "));
+        // store rank in InvList struct
+        assign_pagerank(tallies, tokenised_path, rank);
+    }
+
+    // sort by page rank
+    sortPagerank(tallies);
+    // sort alphabetically
+    sortAlphabetic(tallies);
+    // print to stdout
+    print_urls(tallies);
+    // free the InvList tallies
+    InvListFree(tallies);
+    
+}
+

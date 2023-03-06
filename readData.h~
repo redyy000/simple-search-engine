@@ -1,0 +1,27 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#ifndef READDATA_H
+#define READDATA_H
+
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct list *List;
+
+typedef struct graph *Graph;
+
+
+List make_list(void);
+Graph make_graph(List l);
+int is_whitespace(char *word);
+
+#endif

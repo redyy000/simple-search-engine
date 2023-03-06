@@ -1,0 +1,198 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "readData.h"
+#include "Graph.h"
+#include "list.h"
+#include "pagerank.h"
+
+int main(int argc, char *argv[]) {
+    // creates list of URLS
+    List list_of_urls = make_list();
+    
+    // creates graph from set of URLs
+    Graph g = make_graph(list_of_urls);
+    
+    // sets command line arguments into variables 
+    double d = atof(argv[1]);
+    double diffPR = atof(argv[2]);
+    int maxIterations = atoi(argv[3]);
+    
+    // initialise fields of urlinfo
+    RankList urlinfo;
+    urlinfo.urlCount = GraphNumVertices(g);
+    urlinfo.data = malloc(urlinfo.urlCount * sizeof(Ranks));
+    int url_counter = 0;
+    int col_counter;
+    int row_counter;
+
+    // initialise variables in urlinfo
+    while (url_counter < urlinfo.urlCount) { 
+        urlinfo.data[url_counter].inlinks = 0;
+        urlinfo.data[url_counter].outlinks = 0;
+        urlinfo.data[url_counter].prevpRank = 0;
+        urlinfo.data[url_counter].pRank = 0;
+        url_counter++;
+    }
+    
+    // calculate inlinks and store in urlinfo + array
+    int N = GraphNumVertices(g);
+    int inlinks[N][N];
+    for (col_counter = 0; col_counter < N; col_counter++) {
+        for (row_counter = 0; row_counter < N; row_counter++) {
+            // inlink exists in this case
+            if (GraphIsAdjacent(g, row_counter, col_counter) == 1) {
+                inlinks[col_counter][row_counter] = 1;
+                urlinfo.data[col_counter].inlinks++;
+            } else {
+                inlinks[col_counter][row_counter] = 0;
+            }
+        }
+    }
+    // calculate outlinks and store in urlinfo
+    for (row_counter = 0; row_counter < N; row_counter++) {
+        for (col_counter = 0; col_counter < N; col_counter++) {
+            // outlink exists in this case
+            if (GraphIsAdjacent(g, row_counter, col_counter) == 1) {
+                urlinfo.data[row_counter].outlinks++;
+            }
+        }
+    }
+    // calculate each page rank
+    doPageRank(g, urlinfo, d, diffPR, maxIterations, N, inlinks);
+    
+    // export the pageranks with formatting to pagerankList.txt
+    sendFinalPageRank(g, list_of_urls, urlinfo, N);
+    
+    // free all memory allocations
+    for (int i = 0; i < GraphNumVertices(g); i++) {
+        free(urlinfo.data[i].url);
+    }
+    ListFree(list_of_urls);
+    GraphFree(g);
+    free(urlinfo.data);
+}
+
+/**
+ * Calculates the page rank formula
+ */
+void doPageRank(Graph g, RankList urlinfo, double d, double diffPR, 
+                int maxIterations, int N, int lnks[N][N]) {
+    int c, k, w, iteration;
+    double prevPR, sum;
+    double diff = diffPR;
+    // initialise page rank
+    for (c = 0; c < N; c++) {
+        urlinfo.data[c].pRank = 1/(double)N;
+    }
+    iteration = 0;
+    while ((iteration < maxIterations) && diff >= diffPR) {
+        diff = 0;
+        for (k = 0; k < N; k++) {
+            sum = 0;
+            // store prevPR for later
+            prevPR = urlinfo.data[k].pRank;
+            for (w = 0; w < N; w++) {
+                // if k links to q, add to sum
+                if (lnks[k][w] == 1) {
+                    sum += urlinfo.data[w].pRank * wIn(k, w, g, urlinfo) * wOut(k, w, g, urlinfo);
+                }
+            }
+            // perform calculations
+            urlinfo.data[k].pRank = ((1 - d) / N) + (sum * d);
+            diff += fabs(urlinfo.data[k].pRank - prevPR);
+        }
+        iteration++;
+    }
+    return;
+}
+
+/**
+ * Calculates W(in) for two specified urls
+ */
+double wIn(int k, int w, Graph g, RankList urlinfo) {
+    int N = GraphNumVertices(g);
+    double tmp = 0;
+    for (int i = 0; i < N; i++) {
+        if (GraphIsAdjacent(g, w, i)) {
+            tmp = tmp + urlinfo.data[i].inlinks;
+        }
+    }
+    double sum = 0;
+    sum = ((urlinfo.data[k].inlinks)/tmp);
+    return sum;
+}            
+
+/**
+ * Calculates W(out) for two specified urls
+ */
+double wOut(int k, int w, Graph g, RankList urlinfo) {
+    int N = GraphNumVertices(g);
+    double tmp = 0;
+    for (int i = 0; i < N; i++) {
+        if (GraphIsAdjacent(g, w, i)) {
+            // where the value is 0, change to 0.5 for ease of division
+            if (!urlinfo.data[i].outlinks) {
+                tmp += 0.5;
+            } else {
+                tmp += urlinfo.data[i].outlinks;
+            }
+        }
+    }
+    double sum = 0;
+    // where the value is 0, change to 0.5 for ease of division
+    if (!urlinfo.data[k].outlinks) {
+        urlinfo.data[k].outlinks = 0.5;
+    }
+    sum = ((urlinfo.data[k].outlinks)/tmp);
+    return sum;
+}
+
+/**
+ * Sorts the Rank List via bubble sort
+ */
+void BubbleSort(RankList urlinfo, int N) {
+    for(int i = 1; i < N; i++) {
+        for(int j = 0; j < N - i; j++) {
+            if (urlinfo.data[j].pRank < urlinfo.data[j + 1].pRank) {
+                Ranks temp = urlinfo.data[j];
+                urlinfo.data[j] = urlinfo.data[j + 1];
+                urlinfo.data[j + 1] = temp;
+            }
+        }
+    }
+}
+
+/**
+ * Exports the final list of formatted page ranks to pagerankList.txt
+ */
+void sendFinalPageRank(Graph g, List l, RankList urlinfo, int N) {
+    // store urls in struct to simplify export
+    char urlnumber[15];
+    for (int i = 0; i < N; i++) {
+        strcpy(urlnumber, getUrlFromVertex(l, i));
+        urlinfo.data[i].url = strdup(urlnumber);
+    }
+    BubbleSort(urlinfo, N);
+    FILE *fp = fopen("pagerankList.txt", "w");
+    if (fp == NULL) {
+        fprintf(stderr, "Invalid input file\n");
+        exit(EXIT_FAILURE);
+    }
+    // export with proper formatting
+    for (int j = 0; j < N; j++) {
+            fprintf(fp, "%s, %.0f, %.7f\n", urlinfo.data[j].url,
+                    urlinfo.data[j].outlinks, urlinfo.data[j].pRank);
+    }
+    fclose(fp);
+}

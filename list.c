@@ -1,0 +1,142 @@
+// COMP2521 Assignment 2
+
+// Written by: Ryan Godakanda z5366513
+// Date: November 2021
+
+#include <assert.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "list.h"
+
+struct node {
+    char *url;
+    Node next;
+    int vertex;
+};
+
+struct list {
+    Node head;
+    Node tail;
+    int size;
+};
+
+/**
+ * Create a new Node with name u
+ * (this function is local to this ADT)
+ */
+static Node newNode(char *u);
+
+/**
+ * Creates a new empty list
+ */
+List ListNew(void) {
+    List l = malloc(sizeof (*l));
+	if (l == NULL) {
+	    printf("error: couldn't allocate List");
+        exit(EXIT_FAILURE);
+	}
+    l->head = NULL;
+    l->tail = NULL;
+    l->size = 0;
+    return l;
+}
+
+/**
+ * Frees all resources associated with the given list
+ */
+void ListFree(List l) {
+	if (l == NULL) {
+	    return;
+    }
+    Node curr = l->head;
+	while (curr != NULL) {
+		Node temp = curr;
+		free(curr->url);
+		curr = curr->next;
+		free(temp);
+	}
+	free(l);
+}
+
+/**
+ * Returns the size of the list
+ */
+int ListSize(List l) {
+    return l->size;
+}
+
+/**
+ * Append one URL to the end of a list.
+ */
+void ListAppend(List l, char *u) {
+	assert(l != NULL);
+	Node n = newNode(u);
+	Node curr = l->head;
+	int v = 0;
+	if (l->head == NULL) {
+		l->head = l->tail = n;
+	} else {
+	    while (curr != l->tail) {
+	        curr = curr->next;
+	        v++;
+        }
+		l->tail->next = n;
+		l->tail = n;
+		v++;
+	}
+	n->vertex = v;
+	l->size++;
+}
+
+/**
+ * Create a new Node with name u
+ * (this function is local to this ADT)
+ */
+static Node newNode(char *u) {
+	Node n = malloc(sizeof(*n));
+	if (n == NULL) {
+		printf("error: couldn't allocate node");
+		exit(EXIT_FAILURE);
+	}
+	n->url = strdup(u);
+	n->next = NULL;
+	return n;
+}
+
+/**
+ * Returns the url associated with the supplied vertex
+ */
+char *getUrlFromVertex(List l, Vertex v) {
+	assert(l != NULL);
+    Node curr = l->head;
+    while (curr != NULL) {
+        if (curr->vertex == v) {
+            return curr->url;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Returns the vertex associated with the supplied url
+ */
+Vertex getVertexFromUrl(List l, char *u) {
+	assert(l != NULL);
+	Node curr = l->head;
+	while (curr != NULL) {
+	    if (strcmp(curr->url, u) == 0) {
+	        return curr->vertex;
+        } else {
+            curr = curr->next;
+        }
+    }
+    return -1;
+}
+
